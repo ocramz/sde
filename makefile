@@ -10,7 +10,7 @@ build:
 	stack build
 
 plot: plot.png
-	stack exec sde-plot -- -o plot.png
+	stack exec sde-plot -- -o plot.png 200 0.002
 
 
 all:

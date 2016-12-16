@@ -3,7 +3,8 @@ module Main where
 
 import Control.Monad
 import Control.Monad.Primitive
--- import Control.Monad.Trans.State
+
+import Control.Monad.Trans.State
 import Control.Monad.Trans.Class
 
 import Plots
@@ -21,31 +22,33 @@ import Data.Typeable
 
 import System.Random.MWC.Probability
 
-mydata1 = [(1,3), (2,5.5), (3.2, 6), (3.5, 6.1)]
-mydata2 = mydata1 & each . _1 *~ 0.5
-mydata3 = [V2 1.2 2.7, V2 2 5.1, V2 3.2 2.6, V2 3.5 5]
 
--- myaxis :: Axis B V2 Double
--- myaxis = r2Axis &~ do
---   linePlot' mydata1
---   linePlot mydata2 $ do
---     key "data 2"
---     plotColor .= black
---   linePlot mydata3 $ key "data 3"
+
+
 
 main :: IO ()
-main = do
-  dat <- asdf 25
-  r2AxisMain $ myaxis dat
-  
+main = mainWith myaxis --(myaxis :: Int -> IO (Axis B V2 Double))
 
--- myaxis :: Axis B V2 Double
-myaxis :: [(Double, Double)] -> Axis B V2 Double
-myaxis dat = r2Axis &~ do
+
+myaxis :: Int -> Double -> IO (Axis B V2 Double)
+myaxis n lw = execStateT ?? r2Axis $ do
+    dat <- genDataset n
+    xMin ?= 0
+    xMax ?= 200
     linePlot dat $ do
       key "SDE"
-      plotColor .= black
+      plotColor .= red
+      lineStyle %= lwN lw
+      -- lineStyle %= (dashingG [0.3, 0.5] 0 #
+      --               lwN 0.01)
 
+
+-- | Data generation
+
+genDataset :: (PrimMonad m, Num a, Enum a) => Int -> m [(a, Double)]
+genDataset n = do
+  g <- create
+  zip [0 .. n'-1] <$> samples n' hierarchicalModel g  where n' = fromIntegral n
 
 hierarchicalModel :: PrimMonad m => Prob m Double
 hierarchicalModel = do
@@ -57,8 +60,29 @@ hierarchicalModel = do
   -- n <- uniformR (5, 10)
   -- binomial n p
 
--- asdf :: PrimMonad m => Int -> m [(Double, Double)]
--- asdf :: Int -> StateT [(Double, Double)] Identity
-asdf n = do
-  g <- create
-  zip [0 .. n'-1] <$> samples n' hierarchicalModel g where n' = fromIntegral n
+
+
+
+
+
+-- | example
+
+-- stock :: MonadIO m => String -> m (Response ByteString)
+-- stock s = liftIO $ get ("http://ichart.yahoo.com/table.csv?s=" ++ s)
+
+-- myaxis :: IO (Axis B V2 Double)
+-- myaxis = execStateT ?? r2Axis $ do
+--   goog <- stock "GOOG"
+--   appl <- stock "AAPL"
+--   let stocks r = filterStocks . parseStocks $ r ^. responseBody
+--   linePlot (stocks goog) $ key "google"
+--   linePlot (stocks appl) $ key "apple"
+--   xAxis . tickLabelFunction .= autoTimeLabels
+
+--   xLabel .= "date"
+--   yLabel .= "closing (dollars)"
+
+--   yMin ?= 0
+
+-- main :: IO ()
+-- main = mainWith myaxis
