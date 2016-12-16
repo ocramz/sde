@@ -1,64 +1,92 @@
 {-# language NoMonomorphismRestriction, FlexibleContexts #-}
 module Main where
 
+import Lib
+
 import Control.Monad
 import Control.Monad.Primitive
 
 import Control.Monad.Trans.State
-import Control.Monad.Trans.Class
+-- import Control.Monad.Trans.Class
 
 import Plots
 import Plots.Axis
 import Plots.Axis.Render
 import Plots.Style
 import Plots.Types
+import Plots.Types.Histogram
 import Plots.Types.Line
 
 import Diagrams.Prelude
 import Diagrams.Backend.Rasterific.CmdLine
 
-import Data.Typeable
-
+-- import Data.Typeable
 
 import System.Random.MWC.Probability
 
+import System.Environment (getArgs, withArgs)
 
 
 
 
 main :: IO ()
-main = mainWith myaxis --(myaxis :: Int -> IO (Axis B V2 Double))
+main = do
+  (plotType:n:args) <- getArgs
+  -- putStrLn $ unwords [plotType, show (read n :: Int)]
+  dat <- genDataset (read n :: Int) (alphaStable 1.885 1)
+  let datp = indexed dat
+  withArgs args $ case plotType of
+    "series" -> mainWith (timeSeriesPlot datp)
+    "hist"  -> mainWith (histPlot dat)
+    _ -> mainWith (timeSeriesPlot datp)
+    where
+      timeSeriesPlot :: [(Double, Double)] -> IO (Axis B V2 Double)        
+      timeSeriesPlot d = execStateT ?? r2Axis $ do
+        xMin ?= 0
+        linePlot d $ do
+          key "Time series"
+          plotColor .= red
+          lineStyle %= lwN 0.001
+          -- lineStyle %= (dashingG [0.3, 0.5] 0 #
+          --               lwN 0.01)
+      histPlot :: [Double] -> IO (Axis B V2 Double)
+      histPlot d = execStateT ?? r2Axis $ 
+       histogramPlot d $ do
+         -- key "SDE"
+         plotColor .= blue
+         areaStyle . _opacity .= 0.5
 
 
-myaxis :: Int -> Double -> IO (Axis B V2 Double)
-myaxis n lw = execStateT ?? r2Axis $ do
-    dat <- genDataset n
-    xMin ?= 0
-    xMax ?= 200
-    linePlot dat $ do
-      key "SDE"
-      plotColor .= red
-      lineStyle %= lwN lw
-      -- lineStyle %= (dashingG [0.3, 0.5] 0 #
-      --               lwN 0.01)
+      
+
+
 
 
 -- | Data generation
 
-genDataset :: (PrimMonad m, Num a, Enum a) => Int -> m [(a, Double)]
-genDataset n = do
+genDataset :: (PrimMonad m, RealFloat a) => Int -> Prob m a -> m [a]
+genDataset n model = do
   g <- create
-  zip [0 .. n'-1] <$> samples n' hierarchicalModel g  where n' = fromIntegral n
+  filter (not . isNaN) <$> samples n' model g  where
+    n' = fromIntegral n
 
-hierarchicalModel :: PrimMonad m => Prob m Double
-hierarchicalModel = do
-  [c, d, e, f] <- replicateM 4 $ uniformR (1, 10)
-  a <- gamma c d
-  b <- gamma e f
-  -- p <- beta a b
-  beta a b 
-  -- n <- uniformR (5, 10)
-  -- binomial n p
+-- genDataset :: PrimMonad m => Int -> m [Double]
+-- genDataset n = do
+--   g <- create
+--   filter (not . isNaN) <$> samples n' model g  where
+--     n' = fromIntegral n
+--     model = alphaStable 1.885 1
+
+
+-- hierarchicalModel :: PrimMonad m => Prob m Double
+-- hierarchicalModel = do
+--   [c, d, e, f] <- replicateM 4 $ uniformR (1, 10)
+--   a <- gamma c d
+--   b <- gamma e f
+--   -- p <- beta a b
+--   beta a b 
+--   -- n <- uniformR (5, 10)
+--   -- binomial n p
 
 
 
@@ -86,3 +114,11 @@ hierarchicalModel = do
 
 -- main :: IO ()
 -- main = mainWith myaxis
+
+
+
+
+-- | Utilities
+
+indexed :: (Num a, Enum a) => [b] -> [(a, b)]
+indexed dd = let n = fromIntegral $ length dd  in zip [0 .. n-1] dd

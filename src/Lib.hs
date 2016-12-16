@@ -26,15 +26,15 @@ import System.Random.MWC.Probability
 
                         
 
-genAlphaStable' ::
+genAlphaStable ::
   PrimMonad m => Double -> Double -> Int -> m [Double]
-genAlphaStable' al be n = do
+genAlphaStable al be n = do
   g <- create
-  samples n (alphaStable' al be) g
+  samples n (alphaStable al be) g
 
 -- | The Chambers-Mallows-Stuck algorithm for producing a S_alpha(beta) stable r.v., using the continuous reparametrization around alpha=1
-alphaStable' :: PrimMonad m => Double -> Double -> Prob m Double
-alphaStable' al be = do
+alphaStable :: PrimMonad m => Double -> Double -> Prob m Double
+alphaStable al be = do
   u <- normal (-0.5 * pi) (0.5 * pi)  -- Phi
   w <- exponential 1
   let eps = 1 - al
@@ -42,10 +42,8 @@ alphaStable' al be = do
       phi0 = - 0.5 * pi * be * k / al
       tap0 = tan (al * phi0)
       z = (cos (eps * u) - tap0 * sin (eps * u)) / (w * cos u)
-      ze = z**(eps/(1-eps))
+      ze = z**(eps / al)
   return $ (sin(al*u)/cos u - tap0 * (cos (al * u) /cos u - 1))*ze + tap0*(1-ze)
-
-
 
 
 
