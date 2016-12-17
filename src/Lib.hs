@@ -2,22 +2,71 @@
 module Lib where
 
 import Control.Applicative
+import Control.Monad
 
 import Control.Monad.Primitive
--- import Control.Monad.State
+-- import qualified Control.Monad.State as S
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Strict (StateT, get, put, execStateT)
-import Control.Monad.IO.Class (liftIO)
 
 import System.Random.MWC.Probability
 
-import Pipes (Producer, yield, (>->), await, runEffect)
-import qualified Pipes.Prelude as P (take, mapM_, mapM)
+-- import Pipes (Producer, yield, (>->), (>~), await, runEffect)
+-- import qualified Pipes.Prelude as P (take, mapM_, mapM, sequence)
+
+
 
 
 newtype Transition m a = Trans { runTrans :: StateT a (Prob m) a}
 
+
+    
+-- | Template for an time-discrete SDE.
+sde0 :: Monad m => (b -> a -> b) -> Prob m a -> Transition m b
+sde0 f mm = Trans $ do
+  x <- get
+  w <- lift mm
+  let x' = f x w
+  put x'
+  return x'
+
+
+
+-- | Return a single random value by following the given Transition kernel
+sampleOnce :: Monad m => Transition m a -> a -> Gen (PrimState m) -> m a
+sampleOnce mm s = sample (execStateT (runTrans mm) s)
+
+-- | Return a list of random values by following the given Transition kernel
+samplesTrans ::
+  PrimMonad m => Int -> Transition m a -> a -> Gen (PrimState m) -> m [a]
+samplesTrans n mm s = samples n (execStateT (runTrans mm) s)
+
+
+
+
+-- -- Pipes-based (follows https://hackage.haskell.org/package/mighty-metropolis-1.0.4/docs/src/Numeric-MCMC-Metropolis.html#mcmc )
+
+-- chain :: Monad m => Transition m a -> a -> Gen (PrimState m) -> Producer a m ()
+-- chain mm = loop where
+--   loop s g = do
+--     next <- lift $ sample (execStateT (runTrans mm) s) g
+--     yield next
+--     -- return next
+--     loop next g
+
+-- runChain n t x0 g = runEffect $ chain t x0 g >-> P.take n
+
+-- runChain' n t x g = runEffect $ chain t x g >-> P.take n
+
+-- -- -- `mcmc-types` introduces a Transition type: 
+-- -- -- type Transition m a = StateT a (Prob m) ()
+
+
+
+
+
+-- * Stochastic volatility model (from Kang and Oestergaard, 2016)
 stochVolatility1 :: PrimMonad m =>
    Double -> Double -> Double -> Double -> Transition m Double
 stochVolatility1 a b sig alpha = Trans $ do
@@ -28,53 +77,7 @@ stochVolatility1 a b sig alpha = Trans $ do
       yt = a * exp (xt / 2) * vt
   put yt
   return yt
-    
 
-
-
-sde0 :: Monad m => (b -> a -> b) -> Prob m a -> Transition m b
-sde0 f mm = Trans $ do
-  x <- get
-  w <- lift mm
-  let x' = f x w
-  put x'
-  return x'
-
-chain :: Monad m => Transition m a -> a -> Gen (PrimState m) -> Producer a m ()
-chain mm = loop where
-  loop s g = do
-    next <- lift $ sample (execStateT (runTrans mm) s) g
-    yield next
-    loop next g
-
-runChain n t x0 g = runEffect $ chain t x0 g >-> P.take n >-> P.mapM_ print
-
--- -- `mcmc-types` introduces a Transition type: 
--- -- type Transition m a = StateT a (Prob m) ()
-
--- newtype Transition m a = Trans { runTrans :: StateT a (Prob m) () }
-
--- -- sde1 :: PrimMonad m => (Double -> Double) -> Transition m Double
--- sde1 f = Trans $ do
---   x <- get
---   w <- lift $ normal 0 1
---   let x' = f x + w
---   put x'
-
-
--- -- chain :: Monad m => Transition m t -> t -> Gen (PrimState m) -> Producer t m ()
--- chain mm = loop where
---   loop s g = do
---     next <- lift $ sample (execStateT (runTrans mm) s) g
---     yield next
---     loop next g
-
--- -- runChain :: Show b => Int -> Transition IO b -> b -> Gen RealWorld -> IO ()
--- runChain n t x0 g = runEffect $
---     chain t x0 g >->
---     P.take n
---     >-> await
---     -- >-> P.mapM return
 
 
 

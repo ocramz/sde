@@ -32,42 +32,60 @@ import System.Environment (getArgs, withArgs)
 
 main :: IO ()
 main = do
-  (plotType:ns:alps:bets:args) <- getArgs
-  -- putStrLn $ unwords [plotType, show (read n :: Int)]
+  -- (plotType:ns:alps:bets:args) <- getArgs
+  -- let alp = read alps :: Double
+  --     bet = read bets :: Double
+  --     md = alphaStableWD 0 alp bet
+  -- let ds = unwords ["alpha",show alp,"beta",show bet]
+  (plotType:ns:aa:bb:sigs:alps:args) <- getArgs
   let n = read ns :: Int
+      a = read aa :: Double
+      b = read bb :: Double
+      sig = read sigs :: Double
       alp = read alps :: Double
-      bet = read bets :: Double
-  dat <- genDataset n (alphaStableWD 0 alp bet)
+      md = create >>= samplesTrans n (stochVolatility1 a b sig alp) 0
+      ds = unwords ["a",show a,"b",show b,"sigma",show sig,"alpha",show alp]
+  let n = read ns :: Int
+  dat <- md
   let datp = indexed dat
-      ds = unwords ["alpha",show alp,"beta",show bet]
   withArgs args $ case plotType of
     "series" -> mainWith (timeSeriesPlot ds datp)
     "hist"  -> mainWith (histPlot ds dat)
     _ -> mainWith (timeSeriesPlot ds datp)
-    where
-      timeSeriesPlot :: String -> [(Double, Double)] -> IO (Axis B V2 Double)        
-      timeSeriesPlot descStr d = execStateT ?? r2Axis $ do
+
+timeSeriesPlot :: String -> [(Double, Double)] -> IO (Axis B V2 Double)
+timeSeriesPlot descStr d = execStateT ?? r2Axis $ do
         xMin ?= 0
         linePlot d $ do
-          key descStr
+          -- key descStr
           plotColor .= red
           lineStyle %= lwN 0.001
         legendStyle . _lw .= 0
-        legendTextWidth *= 2
+        legendTextWidth *= 4
           -- lineStyle %= (dashingG [0.3, 0.5] 0 #
           --               lwN 0.01)
-      histPlot :: String -> [Double] -> IO (Axis B V2 Double)
-      histPlot descStr d = execStateT ?? r2Axis $ do
+
+histPlot :: String -> [Double] -> IO (Axis B V2 Double)
+histPlot descStr d = execStateT ?? r2Axis $ do
        histogramPlot d $ do
-         key descStr
+         -- key descStr
          plotColor .= blue
          areaStyle . _opacity .= 0.5
+         numBins .= 20
        legendStyle . _lw .= 0
-       legendTextWidth *= 2
+       legendTextWidth *= 4
 
+
+withPlotType :: (Int -> IO [b1]) -> (String -> IO b) -> IO b
+withPlotType fm f = do
+  (plotType:ns:args) <- getArgs
+  let n = read ns :: Int
+  dat <- fm n
+  let datp = indexed dat
+  withArgs args (f plotType)
 
       
-
+-- create >>= samplesTrans 100 (stochVolatility1 0.0042 0.991 0.104 1.885) 0
 
 
 
