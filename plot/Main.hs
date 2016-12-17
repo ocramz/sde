@@ -19,7 +19,9 @@ import Plots.Types.Histogram
 import Plots.Types.Line
 
 import Diagrams.Prelude
-import Diagrams.Backend.Rasterific.CmdLine
+-- import Diagrams.Backend.Rasterific.CmdLine
+import Diagrams.Backend.Postscript
+import Diagrams.Backend.Postscript.CmdLine
 
 -- import Data.Typeable
 
@@ -43,7 +45,9 @@ main = do
       b = read bb :: Double
       sig = read sigs :: Double
       alp = read alps :: Double
+      -- model = stochVolatility1 a b sig alp
       md = create >>= samplesTrans n (stochVolatility1 a b sig alp) 0
+      -- md = cumSum <$> (create >>= samplesTrans n (brownian sig) 0)
       ds = unwords ["a",show a,"b",show b,"sigma",show sig,"alpha",show alp]
   let n = read ns :: Int
   dat <- md
@@ -56,10 +60,11 @@ main = do
 timeSeriesPlot :: String -> [(Double, Double)] -> IO (Axis B V2 Double)
 timeSeriesPlot descStr d = execStateT ?? r2Axis $ do
         xMin ?= 0
+        xMax ?= fromIntegral (length d)
         linePlot d $ do
-          -- key descStr
-          plotColor .= red
-          lineStyle %= lwN 0.001
+          -- -- key descStr
+          plotColor .= blue
+          lineStyle %= lwN 0.0001
         legendStyle . _lw .= 0
         legendTextWidth *= 4
           -- lineStyle %= (dashingG [0.3, 0.5] 0 #
@@ -71,7 +76,7 @@ histPlot descStr d = execStateT ?? r2Axis $ do
          -- key descStr
          plotColor .= blue
          areaStyle . _opacity .= 0.5
-         numBins .= 20
+         numBins .= 50
        legendStyle . _lw .= 0
        legendTextWidth *= 4
 

@@ -64,6 +64,16 @@ samplesTrans n mm s = samples n (execStateT (runTrans mm) s)
 
 
 
+-- * Brownian random walk
+brownian :: PrimMonad m => Double -> Transition m Double
+brownian sig = Trans $ do
+  x <- get
+  w <- lift $ normal 0 sig
+  let y = x + w
+  put y
+  return y
+
+
 
 
 -- * Stochastic volatility model (from Kang and Oestergaard, 2016)
@@ -118,6 +128,9 @@ whenNaN :: RealFloat a => a -> a -> a
 whenNaN val x
   | isNaN x   = val
   | otherwise = x
+
+cumSum :: Num a => [a] -> [a]
+cumSum = scanl (+) 0
 
 
 -- Not functional :
