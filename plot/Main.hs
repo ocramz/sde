@@ -12,6 +12,7 @@ import Control.Monad.Trans.State
 import Plots
 import Plots.Axis
 import Plots.Axis.Render
+import Plots.Legend
 import Plots.Style
 import Plots.Types
 import Plots.Types.Histogram
@@ -31,30 +32,38 @@ import System.Environment (getArgs, withArgs)
 
 main :: IO ()
 main = do
-  (plotType:n:args) <- getArgs
+  (plotType:ns:alps:bets:args) <- getArgs
   -- putStrLn $ unwords [plotType, show (read n :: Int)]
-  dat <- genDataset (read n :: Int) (alphaStable 1.885 1)
+  let n = read ns :: Int
+      alp = read alps :: Double
+      bet = read bets :: Double
+  dat <- genDataset n (alphaStableWD 0 alp bet)
   let datp = indexed dat
+      ds = unwords ["alpha",show alp,"beta",show bet]
   withArgs args $ case plotType of
-    "series" -> mainWith (timeSeriesPlot datp)
-    "hist"  -> mainWith (histPlot dat)
-    _ -> mainWith (timeSeriesPlot datp)
+    "series" -> mainWith (timeSeriesPlot ds datp)
+    "hist"  -> mainWith (histPlot ds dat)
+    _ -> mainWith (timeSeriesPlot ds datp)
     where
-      timeSeriesPlot :: [(Double, Double)] -> IO (Axis B V2 Double)        
-      timeSeriesPlot d = execStateT ?? r2Axis $ do
+      timeSeriesPlot :: String -> [(Double, Double)] -> IO (Axis B V2 Double)        
+      timeSeriesPlot descStr d = execStateT ?? r2Axis $ do
         xMin ?= 0
         linePlot d $ do
-          key "Time series"
+          key descStr
           plotColor .= red
           lineStyle %= lwN 0.001
+        legendStyle . _lw .= 0
+        legendTextWidth *= 2
           -- lineStyle %= (dashingG [0.3, 0.5] 0 #
           --               lwN 0.01)
-      histPlot :: [Double] -> IO (Axis B V2 Double)
-      histPlot d = execStateT ?? r2Axis $ 
+      histPlot :: String -> [Double] -> IO (Axis B V2 Double)
+      histPlot descStr d = execStateT ?? r2Axis $ do
        histogramPlot d $ do
-         -- key "SDE"
+         key descStr
          plotColor .= blue
          areaStyle . _opacity .= 0.5
+       legendStyle . _lw .= 0
+       legendTextWidth *= 2
 
 
       
@@ -67,7 +76,7 @@ main = do
 genDataset :: (PrimMonad m, RealFloat a) => Int -> Prob m a -> m [a]
 genDataset n model = do
   g <- create
-  filter (not . isNaN) <$> samples n' model g  where
+  samples n' model g  where
     n' = fromIntegral n
 
 -- genDataset :: PrimMonad m => Int -> m [Double]

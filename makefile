@@ -10,10 +10,8 @@ build:
 	stack build
 
 plot: 
-	# stack exec sde-plot -- -o series.png series 1000
-	# stack exec sde-plot -- -o hist.png hist 1000
-	stack exec sde-plot -- series 1000 -o series.png
-	stack exec sde-plot -- hist 1000 -o hist.png
+	stack exec sde-plot -- series 1800 1.5 1 -o series.png
+	stack exec sde-plot -- hist 1800 1.5 1 -o hist.png
 
 all:
 	make build

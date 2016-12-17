@@ -4,6 +4,10 @@ module Lib where
 import Control.Applicative
 
 import Control.Monad.Primitive
+import Control.Monad.State
+
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.IO.Class (liftIO)
 
 import System.Random.MWC.Probability
 
@@ -19,11 +23,49 @@ import System.Random.MWC.Probability
 --   -- return $ a * exp (xt / 2) * vt
 --   liftA2 (\x y -> a * exp (x/2) * y) xt vt
 
--- stochV a b sig alpha xtm = do
+-- stochV_ a b sig alpha = runState (stochV a b sig alpha) 0
+
+-- asfd x = do
+--   n <- normal 0 1
+--   asfd $ n + x
+
+sde1 f = do
+  x <- lift get
+  w <- normal 0 1
+  let x' = f x + w
+  lift $ put x'
+  return x'
+
+sde2 :: (PrimMonad m, MonadState Double m) =>
+           Gen (PrimState m) -> (Double -> Double) -> m Double
+sde2 g f = do
+  x <- get
+  w <- sample (normal 0 1) g
+  let x' = f x + w
+  put x'
+  return x'
+
+
+
+
+stochV
+  :: (PrimMonad m, MonadState Double (Prob m)) =>
+     Double -> Double -> Double -> Double -> Prob m Double
+stochV a b sig alpha = do
+  xtm <- get
+  ut <- normal 0 1
+  vt <- alphaStable alpha 1
+  let xt = b * xtm + sig * ut
+      yt = a * exp (xt / 2) * vt
+  put yt
+  return yt
+
+-- stochV1 a b sig alpha = state $ \x -> do
 --   ut <- normal 0 1
---   vt <- alphaStable
-
-
+--   vt <- alphaStable alpha 1
+--   let xt = b * x + sig * ut
+--       yt = a * exp (xt / 2) * vt
+--   return yt
                         
 
 genAlphaStable ::
@@ -45,6 +87,21 @@ alphaStable al be = do
       ze = z**(eps / al)
   return $ (sin(al*u)/cos u - tap0 * (cos (al * u) /cos u - 1))*ze + tap0*(1-ze)
 
+
+-- | replaces all NaNs with a default value
+alphaStableWD :: PrimMonad m => Double -> Double -> Double -> Prob m Double
+alphaStableWD defv al be = whenNaN defv <$> alphaStable al be
+
+
+
+
+-- ** Utilities
+
+-- | Replace NaN with a default value
+whenNaN :: RealFloat a => a -> a -> a
+whenNaN val x
+  | isNaN x   = val
+  | otherwise = x
 
 
 -- Not functional :
