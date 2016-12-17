@@ -9,13 +9,15 @@ Numerical experiments with stochastic differential equations in Haskell
 
 In the figure above, a sample path (left) and histogram of the stochastic volatility model of Equation 1:
 
-y_t = a exp(x_t / 2) v_t           (1)
-x_t = b x_{t-1} + sigma u_t
+    y_t = a exp(x_t / 2) v_t           (1)
+
+    x_t = b x_{t-1} + sigma u_t
 
 where
 
-u_t ~ N(0, 1)
-v_t ~ S_alpha(1, 0, 0)
+    u_t ~ N(0, 1)
+    
+    v_t ~ S_alpha(1, 0, 0)
 
 discussed in [1]
 
