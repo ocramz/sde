@@ -27,6 +27,7 @@ library
                      , plots
                      , primitive >= 0.6.1.0
                      , transformers >= 0.5.2.0
+                     , pipes
 
 executable sde
   default-language:    Haskell2010
@@ -39,6 +40,7 @@ executable sde
                      , primitive >= 0.6.1.0
                      , sde
                      , transformers >= 0.5.2.0
+                     , pipes
 
 executable sde-plot
   default-language:    Haskell2010
@@ -54,6 +56,7 @@ executable sde-plot
                      , primitive >= 0.6.1.0
                      , sde
                      , transformers >= 0.5.2.0
+                     , pipes
 
 test-suite spec
   default-language:    Haskell2010
@@ -69,6 +72,7 @@ test-suite spec
                      , primitive >= 0.6.1.0
                      , sde
                      , transformers >= 0.5.2.0
+                     , pipes
 
 source-repository head
   type:     git
