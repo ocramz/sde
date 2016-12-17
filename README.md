@@ -19,7 +19,7 @@ where
     
     v_t ~ S_alpha(1, 0, 0).
 
-`S_alpha(1, 0, 0)` denotes the Levy-stable distribution with parameters `(alpha, 1)`, where `0 < alpha <= 2`. The special cases `alpha=1` and `alpha=2` correspond to the Cauchy-Lorentz and Gaussian distributions, respectively. Values of the `alpha` parameter smaller than 1 result in sudden large deviations typical of "heavy tailed" distributions, which can be used to model shocks or phase changes in underlying phenomena.
+`S_alpha(1, 0, 0)` denotes the Levy-stable distribution with parameters `(alpha, 1)`, where `0 < alpha <= 2`. The special cases `alpha=1` and `alpha=2` correspond to the Cauchy-Lorentz and Gaussian distributions, respectively. Values of the `alpha` parameter smaller than 2 result in sudden large deviations typical of "heavy tailed" distributions, which can be used to model shocks or phase changes in underlying phenomena.
 
 
 
