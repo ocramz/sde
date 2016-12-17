@@ -5,4 +5,4 @@
 Numerical experiments with stochastic differential equations in Haskell
 
 
-![stochastic-volatility-1](https://rawgit.com/ocramz/sde/doc/stoch_volatility1.png)
+![stochastic-volatility-1](https://rawgit.com/ocramz/sde/master/doc/stoch_volatility1.png)
