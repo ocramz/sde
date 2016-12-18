@@ -46,10 +46,11 @@ main = do
       sig = read sigs :: Double
       alp = read alps :: Double
       -- model = stochVolatility1 a b sig alp
-      md = create >>= samplesTrans n (stochVolatility1 a b sig alp) 0
-      -- md = cumSum <$> (create >>= samplesTrans n (brownian sig) 0)
+      -- md = create >>= samplesTrans n (stochVolatility1 a b sig alp) 0
+      -- md = withIOGen (sampleSDEn n (brownian 0.1) 1)
+      md = map sv1y <$> withIOGen (sampleSDEn n (stochVolatility1 a b sig alp) (SV1 0 0))
       ds = unwords ["a",show a,"b",show b,"sigma",show sig,"alpha",show alp]
-  let n = read ns :: Int
+  -- let n = read ns :: Int
   dat <- md
   let datp = indexed dat
   withArgs args $ case plotType of
@@ -96,18 +97,6 @@ withPlotType fm f = do
 
 -- | Data generation
 
-genDataset :: (PrimMonad m, RealFloat a) => Int -> Prob m a -> m [a]
-genDataset n model = do
-  g <- create
-  samples n' model g  where
-    n' = fromIntegral n
-
--- genDataset :: PrimMonad m => Int -> m [Double]
--- genDataset n = do
---   g <- create
---   filter (not . isNaN) <$> samples n' model g  where
---     n' = fromIntegral n
---     model = alphaStable 1.885 1
 
 
 -- hierarchicalModel :: PrimMonad m => Prob m Double

@@ -8,7 +8,7 @@ import Control.Monad.Primitive
 -- import qualified Control.Monad.State as S
 
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State.Strict (StateT, get, put, execStateT)
+import Control.Monad.Trans.State.Strict (StateT, get, put, evalStateT)
 
 import System.Random.MWC.Probability
 
@@ -17,30 +17,130 @@ import System.Random.MWC.Probability
 
 
 
+-- newtype Prob m a = Prob { sample :: Gen (PrimState m) -> m a }
+-- newtype Transition m a = Trans { runTrans :: StateT a (Prob m) a}
 
-newtype Transition m a = Trans { runTrans :: StateT a (Prob m) a}
+newtype Transition m a = Trans { runTrans :: Gen (PrimState m) -> StateT a m a}
 
 
     
--- | Template for an time-discrete SDE.
-sde0 :: Monad m => (b -> a -> b) -> Prob m a -> Transition m b
-sde0 f mm = Trans $ do
+-- *** state transformers
+
+-- | Template for a time-discrete SDE
+sampleSDE ::
+   Monad m => Prob m a -> (b -> a -> b) -> Gen (PrimState m) -> StateT b m b
+sampleSDE msf f g = do
   x <- get
-  w <- lift mm
-  let x' = f x w
-  put x'
-  return x'
+  w <- lift $ sample msf g
+  let z = f x w
+  put z
+  return z
+
+stepN :: Monad m => Int -> StateT s m a -> s -> m [a]
+stepN n mm = evalStateT (replicateM n mm)
+
+sampleSDEn ::
+  Monad m => Int -> Transition m a -> a -> Gen (PrimState m) -> m [a]
+sampleSDEn n sde x0 g = stepN n (runTrans sde g) x0
 
 
 
--- | Return a single random value by following the given Transition kernel
-sampleOnce :: Monad m => Transition m a -> a -> Gen (PrimState m) -> m a
-sampleOnce mm s = sample (execStateT (runTrans mm) s)
 
--- | Return a list of random values by following the given Transition kernel
-samplesTrans ::
-  PrimMonad m => Int -> Transition m a -> a -> Gen (PrimState m) -> m [a]
-samplesTrans n mm s = samples n (execStateT (runTrans mm) s)
+
+
+
+
+
+
+
+-- * Brownian random walk
+-- | NB : the position at a time `t > t0` of a Brownian walker is the integral in time of a Wiener process (i.e. the sample path up to time `t` is cumulative sum of the Brownian displacements)
+brownian ::
+  PrimMonad m => Double -> Transition m Double
+brownian sig = Trans (sampleSDE (normal 0 sig) (+))
+
+
+brownianAbs s = Trans (sampleSDE (abs $ normal 0 s) (+))
+
+
+-- * Stochastic volatility model (from Kang and Oestergaard, 2016)
+
+data SV1 = SV1 {sv1x :: Double, sv1y :: Double} deriving (Eq)
+instance Show SV1 where show (SV1 a b) = show (a, b)
+
+stochVolatility1 :: PrimMonad m =>
+   Double -> Double -> Double -> Double -> Transition m SV1
+stochVolatility1 a b sig alpha = Trans (sampleSDE randf f) where
+  randf = (,) <$> normal 0 1
+              <*> alphaStableWD 0 alpha 1
+  f (SV1 x _) (ut, vt) = let xt = b * x + sig * ut
+                             yt = a * exp (xt / 2) * vt
+                      in SV1 xt yt
+
+
+  
+  
+
+
+
+-- * Levy-stable distribution
+-- | 
+-- genAlphaStable ::
+--   PrimMonad m => Double -> Double -> Int -> m [Double]
+-- genAlphaStable al be n = do
+--   g <- create
+--   samples n (alphaStable al be) g
+
+-- genAlphaStable' :: Double -> Double -> Int -> IO [Double]
+-- genAlphaStable' al be n = withSystemRandom . asGenIO $ \g -> samples n (alphaStable al be) g
+
+
+
+  
+-- | The Chambers-Mallows-Stuck algorithm for producing a S_alpha(beta) stable r.v., using the continuous reparametrization around alpha=1
+alphaStable :: PrimMonad m => Double -> Double -> Prob m Double
+alphaStable al be = do
+  u <- normal (-0.5 * pi) (0.5 * pi)  -- Phi
+  w <- exponential 1
+  let eps = 1 - al
+      k = 1 - abs eps
+      phi0 = - 0.5 * pi * be * k / al
+      tap0 = tan (al * phi0)
+      z = (cos (eps * u) - tap0 * sin (eps * u)) / (w * cos u)
+      ze = z**(eps / al)
+  return $ (sin(al*u)/cos u - tap0 * (cos (al * u) /cos u - 1))*ze + tap0*(1-ze)
+
+
+-- | replaces all NaNs with a default value
+alphaStableWD :: PrimMonad m => Double -> Double -> Double -> Prob m Double
+alphaStableWD defv al be = whenNaN defv <$> alphaStable al be
+
+
+
+
+
+
+
+-- ** Utilities
+
+-- | Replace NaN with a default value
+whenNaN :: RealFloat a => a -> a -> a
+whenNaN val x
+  | isNaN x   = val
+  | otherwise = x
+
+withIOGen:: (Gen RealWorld -> IO a) -> IO a
+withIOGen = withSystemRandom . asGenIO
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -64,73 +164,7 @@ samplesTrans n mm s = samples n (execStateT (runTrans mm) s)
 
 
 
--- * Brownian random walk
-brownian :: PrimMonad m => Double -> Transition m Double
-brownian sig = Trans $ do
-  x <- get
-  w <- lift $ normal 0 sig
-  let y = x + w
-  put y
-  return y
 
-
-
-
--- * Stochastic volatility model (from Kang and Oestergaard, 2016)
-stochVolatility1 :: PrimMonad m =>
-   Double -> Double -> Double -> Double -> Transition m Double
-stochVolatility1 a b sig alpha = Trans $ do
-  x <- get
-  ut <- lift $ normal 0 1
-  vt <- lift $ alphaStableWD 0 alpha 1
-  let xt = b * x + sig * ut
-      yt = a * exp (xt / 2) * vt
-  put yt
-  return yt
-
-
-
-
-
--- * Levy-stable distribution
--- | 
-genAlphaStable ::
-  PrimMonad m => Double -> Double -> Int -> m [Double]
-genAlphaStable al be n = do
-  g <- create
-  samples n (alphaStable al be) g
-
--- | The Chambers-Mallows-Stuck algorithm for producing a S_alpha(beta) stable r.v., using the continuous reparametrization around alpha=1
-alphaStable :: PrimMonad m => Double -> Double -> Prob m Double
-alphaStable al be = do
-  u <- normal (-0.5 * pi) (0.5 * pi)  -- Phi
-  w <- exponential 1
-  let eps = 1 - al
-      k = 1 - abs eps
-      phi0 = - 0.5 * pi * be * k / al
-      tap0 = tan (al * phi0)
-      z = (cos (eps * u) - tap0 * sin (eps * u)) / (w * cos u)
-      ze = z**(eps / al)
-  return $ (sin(al*u)/cos u - tap0 * (cos (al * u) /cos u - 1))*ze + tap0*(1-ze)
-
-
--- | replaces all NaNs with a default value
-alphaStableWD :: PrimMonad m => Double -> Double -> Double -> Prob m Double
-alphaStableWD defv al be = whenNaN defv <$> alphaStable al be
-
-
-
-
--- ** Utilities
-
--- | Replace NaN with a default value
-whenNaN :: RealFloat a => a -> a -> a
-whenNaN val x
-  | isNaN x   = val
-  | otherwise = x
-
-cumSum :: Num a => [a] -> [a]
-cumSum = scanl (+) 0
 
 
 -- Not functional :
