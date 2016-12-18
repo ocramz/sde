@@ -60,7 +60,7 @@ brownian ::
 brownian sig = Trans (sampleSDE (normal 0 sig) (+))
 
 
-brownianAbs s = Trans (sampleSDE (abs $ normal 0 s) (+))
+
 
 
 -- * Stochastic volatility model (from Kang and Oestergaard, 2016)
@@ -72,10 +72,11 @@ stochVolatility1 :: PrimMonad m =>
    Double -> Double -> Double -> Double -> Transition m SV1
 stochVolatility1 a b sig alpha = Trans (sampleSDE randf f) where
   randf = (,) <$> normal 0 1
-              <*> alphaStableWD 0 alpha 1
+              -- <*> alphaStable alpha 1
+              <*> alphaStable100 alpha
   f (SV1 x _) (ut, vt) = let xt = b * x + sig * ut
                              yt = a * exp (xt / 2) * vt
-                      in SV1 xt yt
+                         in SV1 xt yt
 
 
   
@@ -100,9 +101,10 @@ stochVolatility1 a b sig alpha = Trans (sampleSDE randf f) where
 -- | The Chambers-Mallows-Stuck algorithm for producing a S_alpha(beta) stable r.v., using the continuous reparametrization around alpha=1
 alphaStable :: PrimMonad m => Double -> Double -> Prob m Double
 alphaStable al be = do
-  u <- normal (-0.5 * pi) (0.5 * pi)  -- Phi
+  u0 <- uniform 
   w <- exponential 1
-  let eps = 1 - al
+  let u = pi * u0 - 0.5 * pi -- uniform on (-pi/2, pi/2)
+      eps = 1 - al
       k = 1 - abs eps
       phi0 = - 0.5 * pi * be * k / al
       tap0 = tan (al * phi0)
@@ -111,10 +113,23 @@ alphaStable al be = do
   return $ (sin(al*u)/cos u - tap0 * (cos (al * u) /cos u - 1))*ze + tap0*(1-ze)
 
 
--- | replaces all NaNs with a default value
-alphaStableWD :: PrimMonad m => Double -> Double -> Double -> Prob m Double
-alphaStableWD defv al be = whenNaN defv <$> alphaStable al be
+-- -- | replaces all NaNs with a default value
+-- alphaStableWD :: PrimMonad m => Double -> Double -> Double -> Prob m Double
+-- alphaStableWD defv al be = whenNaN defv <$> alphaStable al be
 
+
+-- | Formula given by Li & Oestergaard for S_alpha(1, 0, 0) (i.e. stable distribution with beta=1)
+alphaStable100 :: PrimMonad m => Double -> Prob m Double
+alphaStable100 al = do
+  u0 <- uniform
+  w <- exponential 1
+  let u = pi * u0 - 0.5 * pi -- uniform on (-pi/2, pi/2)
+      t1 = sin (al * u)
+      t2 = cos u**(-1/al)
+      t3 = (cos ((al-1) * u) / w)**((1-al)/al)
+      z = t1 * t2 * t3
+  case al of 1 -> return $ tan u
+             _ -> return z
 
 
 

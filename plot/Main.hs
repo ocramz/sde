@@ -45,10 +45,10 @@ main = do
       b = read bb :: Double
       sig = read sigs :: Double
       alp = read alps :: Double
-      -- model = stochVolatility1 a b sig alp
-      -- md = create >>= samplesTrans n (stochVolatility1 a b sig alp) 0
       -- md = withIOGen (sampleSDEn n (brownian 0.1) 1)
       md = map sv1y <$> withIOGen (sampleSDEn n (stochVolatility1 a b sig alp) (SV1 0 0))
+      -- md = withIOGen (samples n (alphaStable 0.5 1))
+      -- md = withIOGen (samples n (alphaStable100 alp))
       ds = unwords ["a",show a,"b",show b,"sigma",show sig,"alpha",show alp]
   -- let n = read ns :: Int
   dat <- md
@@ -78,6 +78,7 @@ histPlot descStr d = execStateT ?? r2Axis $ do
          plotColor .= blue
          areaStyle . _opacity .= 0.5
          numBins .= 50
+         normaliseSample .= pdf
        legendStyle . _lw .= 0
        legendTextWidth *= 4
 
