@@ -78,7 +78,39 @@ stochVolatility1 a b sig alpha = Trans (sampleSDE randf f) where
                              yt = a * exp (xt / 2) * vt
                          in SV1 xt yt
 
+-- |
+-- κ, θ, α, q > 0, and p = 1/2
+heston :: PrimMonad m =>
+  Double -> Double -> Double -> Double -> Double -> Double -> Transition m SV1
+heston mu p kappa theta alpha q = Trans (sampleSDE randf f) where
+  randf = (,) <$> normal 0 1 <*> normal 0 1
+  f (SV1 s v) (ws, wv) = let st = mu*s + (v**p)*s*ws
+                             vt = kappa*(theta-v) + alpha*(v**q)*wv
+                         in SV1 st vt 
 
+  
+
+  
+-- |
+-- parameters : typical : s_0 = 6216, theta = ln 0.3, kappa = 0.1, alpha = 0.4. Delta t = 1/365 (1 day)
+-- -- strong mean-reversion : kappa = 6, alpha = 1.5. Delta t = 1/2920
+-- no correlation in Brownian noise terms
+scottChesney0 :: PrimMonad m =>
+     Double -> Double -> Double -> Double -> Transition m SV1
+scottChesney0 mu kappa theta alpha = Trans (sampleSDE randf f) where
+  randf = (,) <$> normal 0 1 <*> normal 0 1
+  f (SV1 s y) (ws, wy) = let st = mu * s + exp y * s * ws
+                             yt = kappa * (theta - y) + alpha * wy
+                         in SV1 st yt 
+
+-- | ", unit correlation in Brownian noise terms
+scottChesney1 :: PrimMonad m =>
+     Double -> Double -> Double -> Double -> Transition m SV1
+scottChesney1 mu kappa theta alpha = Trans (sampleSDE randf f) where
+  randf = normal 0 1
+  f (SV1 s y) w = let st = mu * s + exp y * s * w
+                      yt = kappa * (theta - y) + alpha * w
+                  in SV1 st yt 
   
   
 
