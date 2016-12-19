@@ -22,10 +22,24 @@ where
 `S_alpha(1, 0, 0)` denotes the Levy-stable distribution with parameters `(alpha, 1)`, where `0 < alpha <= 2`. The special cases `alpha=1` and `alpha=2` correspond to the Cauchy-Lorentz and Gaussian distributions, respectively. Values of the `alpha` parameter smaller than 2 result in sudden large deviations typical of "heavy tailed" distributions, which can be used to model shocks or phase changes in underlying phenomena.
 
 
+## Implementation details
+
+The library relies on `mwc-probability` for its primitive sampling functionality, and on the `StateT` monad transformer. 
+
+The SDE integration process can be seen as an interleaved sequence of random sampling and state transformation. This idea is captured in the `sampleSDE` function, shown below:
+
+    sampleSDE ::
+       Monad m => Prob m a -> (b -> a -> b) -> Gen (PrimState m) -> StateT b m b
+    sampleSDE msf f g = do
+      x <- get
+      w <- lift $ sample msf g
+      let z = f x w
+      put z
+      return z
 
 
 
 
 
 
-[1] K.Li and Oestergaard, J. - Inference for a stochastic volatility model using MCMC with ABC-SMC approximation
+[1] Li, K. and Oestergaard, J. - Inference for a stochastic volatility model using MCMC with ABC-SMC approximation
