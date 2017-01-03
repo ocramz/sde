@@ -38,8 +38,16 @@ The SDE integration process can be seen as an interleaved sequence of random sam
       return z
 
 
+## Notes
+
+Currently, only the Euler-Maruyama integration method has been implemented (the `sampleSDE` function shown above); this works for some models but is inaccurate and unstable for others; therefore one of the next development goals will be to include higher-order integration schemes such as those shown in Wilkie [2].
+
+
+
 
 
 
 
 [1] Li, K. and Oestergaard, J. - Inference for a stochastic volatility model using MCMC with ABC-SMC approximation
+
+[2] Wilkie, J. - Numerical methods for stochastic differential equations ( https://arxiv.org/abs/quant-ph/0407039 )
