@@ -50,4 +50,4 @@ Currently, only the Euler-Maruyama integration method has been implemented (the 
 
 [1] Li, K. and Oestergaard, J. - Inference for a stochastic volatility model using MCMC with ABC-SMC approximation
 
-[2] Wilkie, J. - Numerical methods for stochastic differential equations ( https://arxiv.org/abs/quant-ph/0407039 )
+[2] Wilkie, J. - Numerical methods for stochastic differential equations (https://arxiv.org/abs/quant-ph/0407039)
