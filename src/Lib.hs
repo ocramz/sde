@@ -141,7 +141,7 @@ alphaStable al be = do
 
 
 
--- | Formula given by Li & Oestergaard for S_alpha(1, 0, 0) (i.e. stable distribution with beta=1)
+-- | Formula given by Li & Oestergaard for S_alpha(1, 0, 0). This formulation is restricted to the beta=1 case, i.e. the symmetric version of the distribution. 
 alphaStable100 :: PrimMonad m => Double -> Prob m Double
 alphaStable100 al = do
   u0 <- uniform
