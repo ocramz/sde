@@ -26,7 +26,9 @@ where
 
 The library relies on `mwc-probability` for its primitive sampling functionality, and on the `StateT` monad transformer. 
 
-The SDE integration process can be seen as an interleaved sequence of random sampling and state transformation. This idea is captured in the `sampleSDE` function, shown below:
+    newtype Transition m a = Trans { runTrans :: Gen (PrimState m) -> StateT a m a }
+
+The SDE integration process can be seen as an interleaved sequence of random sampling and state transformation. Formally, we are sampling independent _increments_ (a Wiener process) of the state variable. This idea is captured in the `sampleSDE` function, shown below:
 
     sampleSDE :: Monad m => Prob m a -> (b -> a -> b) -> Gen (PrimState m) -> StateT b m b
     sampleSDE msf f g = do
@@ -35,6 +37,20 @@ The SDE integration process can be seen as an interleaved sequence of random sam
       let z = f x w
       put z
       return z
+
+For example, the stochastic volatility model shown in the beginning can be implemented as follows :
+
+    data SV1 = SV1 {sv1x :: Double, sv1y :: Double} deriving (Eq, Show)
+
+    stochVolatility1 :: PrimMonad m => Double -> Double -> Double -> Double -> Transition m SV1
+    stochVolatility1 a b sig alpha = Trans (sampleSDE randf f) where
+      randf = (,) <$> normal 0 1
+                  <*> alphaStable100 alpha
+      f (SV1 x _) (ut, vt) = let xt = b * x + sig * ut
+                                 yt = a * exp (xt / 2) * vt
+                             in SV1 xt yt
+
+This formulation lets the library user focus exclusively on the mathematical details of the model she wishes to simulate.
 
 
 ## Notes
