@@ -37,15 +37,15 @@ sampleSDE msf f g = do
   put z
   return z
 
-stepN :: Monad m => Int -> StateT s m a -> s -> m [a]
-stepN n mm = evalStateT (replicateM n mm)
+
 
 -- | Produce a sample path of length `n`, given a `Transition` model `sde`, a starting state `x0` and a random generator `g`.
 sampleSDEn ::
   Monad m => Int -> Transition m a -> a -> Gen (PrimState m) -> m [a]
 sampleSDEn n sde x0 g = stepN n (runTrans sde g) x0
-
-
+  where
+    stepN :: Monad m => Int -> StateT s m a -> s -> m [a]
+    stepN ns = evalStateT . replicateM ns
 
 
 

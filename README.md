@@ -22,7 +22,7 @@ where
 `S_alpha(1, 0, 0)` denotes the Levy-stable distribution with parameters `(alpha, 1)`, where `0 < alpha <= 2`. The special cases `alpha=1` and `alpha=2` correspond to the Cauchy-Lorentz and Gaussian distributions, respectively. Values of the `alpha` parameter smaller than 2 result in sudden large deviations typical of "heavy tailed" distributions, which can be used to model shocks or phase changes in underlying phenomena.
 
 
-## Implementation details
+## Implementation details and usage notes
 
 The library relies on `mwc-probability` for its primitive sampling functionality, and on the `StateT` monad transformer. 
 
@@ -51,6 +51,15 @@ For example, the stochastic volatility model shown in the beginning can be imple
                              in SV1 xt yt
 
 This formulation lets the library user focus exclusively on the mathematical details of the model she wishes to simulate.
+
+Once the stochastic model is written in terms of the `Transition` type, we may simulate a sample path with a runner function such as the following:
+
+    samplePathSDE :: Monad m => Int -> Transition m s -> s -> Gen (PrimState m) -> m [s]
+    samplePathSDE n sde x0 g = evalStateT (replicateM n (runTrans sde g)) x0
+
+The random generator `g :: Gen (PrimState m)` can be instantiated either with `create` (which by default will reuse the seed therefore producing the same random sequence at every call), or within the bracket `withSystemRandom . asIOGen`, which taps from the operating system's random generator. Please refer to the documentation of `mwc-probability` for details.
+
+
 
 
 ## Notes
