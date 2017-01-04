@@ -20,13 +20,14 @@ import System.Random.MWC.Probability
 -- newtype Prob m a = Prob { sample :: Gen (PrimState m) -> m a }
 -- newtype Transition m a = Trans { runTrans :: StateT a (Prob m) a}
 
-newtype Transition m a = Trans { runTrans :: Gen (PrimState m) -> StateT a m a}
+-- | A type for Markov random walks
+newtype Transition m a = Trans { runTrans :: Gen (PrimState m) -> StateT a m a }
 
 
     
 -- *** state transformers
 
--- | Template for a time-discrete SDE
+-- | Template for a time-discrete SDE: at every timestep, sample from the `Prob` and apply the function to the previous state and current sample. This can be used to implement the Euler-Maruyama integrator.
 sampleSDE ::
    Monad m => Prob m a -> (b -> a -> b) -> Gen (PrimState m) -> StateT b m b
 sampleSDE msf f g = do
@@ -39,6 +40,7 @@ sampleSDE msf f g = do
 stepN :: Monad m => Int -> StateT s m a -> s -> m [a]
 stepN n mm = evalStateT (replicateM n mm)
 
+-- | Produce a sample path of length `n`, given a `Transition` model `sde`, a starting state `x0` and a random generator `g`.
 sampleSDEn ::
   Monad m => Int -> Transition m a -> a -> Gen (PrimState m) -> m [a]
 sampleSDEn n sde x0 g = stepN n (runTrans sde g) x0
@@ -116,19 +118,11 @@ scottChesney1 mu kappa theta alpha = Trans (sampleSDE randf f) where
 
 
 
--- * Levy-stable distribution
--- | 
--- genAlphaStable ::
---   PrimMonad m => Double -> Double -> Int -> m [Double]
--- genAlphaStable al be n = do
---   g <- create
---   samples n (alphaStable al be) g
-
--- genAlphaStable' :: Double -> Double -> Int -> IO [Double]
--- genAlphaStable' al be n = withSystemRandom . asGenIO $ \g -> samples n (alphaStable al be) g
 
 
 
+
+  
   
 -- | The Chambers-Mallows-Stuck algorithm for producing a S_alpha(beta) stable r.v., using the continuous reparametrization around alpha=1
 alphaStable :: PrimMonad m => Double -> Double -> Prob m Double
@@ -145,9 +139,6 @@ alphaStable al be = do
   return $ (sin(al*u)/cos u - tap0 * (cos (al * u) /cos u - 1))*ze + tap0*(1-ze)
 
 
--- -- | replaces all NaNs with a default value
--- alphaStableWD :: PrimMonad m => Double -> Double -> Double -> Prob m Double
--- alphaStableWD defv al be = whenNaN defv <$> alphaStable al be
 
 
 -- | Formula given by Li & Oestergaard for S_alpha(1, 0, 0) (i.e. stable distribution with beta=1)
@@ -169,6 +160,17 @@ alphaStable100 al = do
 
 
 -- ** Utilities
+
+
+genSamplesRepeatable :: PrimMonad m => Prob m a -> Int -> m [a]
+genSamplesRepeatable model n = do
+  g <- create
+  samples n model g
+
+genSamplesUnique :: Prob IO a -> Int -> IO [a]
+genSamplesUnique model n = withIOGen (samples n model)
+
+
 
 -- | Replace NaN with a default value
 whenNaN :: RealFloat a => a -> a -> a

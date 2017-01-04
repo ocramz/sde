@@ -28,8 +28,7 @@ The library relies on `mwc-probability` for its primitive sampling functionality
 
 The SDE integration process can be seen as an interleaved sequence of random sampling and state transformation. This idea is captured in the `sampleSDE` function, shown below:
 
-    sampleSDE ::
-       Monad m => Prob m a -> (b -> a -> b) -> Gen (PrimState m) -> StateT b m b
+    sampleSDE :: Monad m => Prob m a -> (b -> a -> b) -> Gen (PrimState m) -> StateT b m b
     sampleSDE msf f g = do
       x <- get
       w <- lift $ sample msf g
