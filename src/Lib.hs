@@ -75,6 +75,8 @@ brownianLogNormal mu sig = Trans (sampleSDE (normal mu sig) f) where
 
 
 
+
+
 -- * Stochastic volatility model (from Kang and Oestergaard, 2016)
 
 data SV1 = SV1 {sv1x :: Double, sv1y :: Double} deriving (Eq)
