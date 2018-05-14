@@ -76,6 +76,14 @@ brownianLogNormal mu sig = Trans (sampleSDE (normal mu sig) f) where
   f s w = mu * s + sig * s * w
 
 
+brownianLogNormal' :: PrimMonad m =>
+     Double -> Double -> MPT.Transition String Double m Double
+brownianLogNormal' mu sig = MPT.mkTransition p f msgf
+  where
+    p _ = normal mu sig
+    f s w = (s',s') where s' = mu * s + sig * s * w
+    msgf a s = show s
+
 
 
 
