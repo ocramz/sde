@@ -1,5 +1,5 @@
 name:                sde
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            Numerical experiments with stochastic differential equations
 description:         Please see README.md
 homepage:            https://github.com/ocramz/sde
@@ -20,11 +20,13 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
   build-depends:       base >= 4.7 && < 5
-                     , diagrams-lib >= 1.3.1.4
-                     , diagrams-rasterific
+                     -- , diagrams-lib >= 1.3.1.4
+                     -- , diagrams-rasterific
+                     , logging-effect
                      , mtl >= 2.2.1
                      , mwc-probability
-                     , plots
+                     , mwc-probability-transition >= 0.3.0.3
+                     -- , plots
                      , primitive >= 0.6.1.0
                      , transformers >= 0.5.2.0
                      -- , pipes
@@ -42,22 +44,22 @@ executable sde
                      , transformers >= 0.5.2.0
                      -- , pipes
 
-executable sde-plot
-  default-language:    Haskell2010
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs:      plot
-  main-is:             Main.hs
-  build-depends:       base
-                     , diagrams-lib >= 1.3.1.4
-                     , diagrams-rasterific
-                     , diagrams-postscript
-                     , mtl >= 2.2.1
-                     , mwc-probability
-                     , plots
-                     , primitive >= 0.6.1.0
-                     , sde
-                     , transformers >= 0.5.2.0
-                     -- , pipes
+-- executable sde-plot
+--   default-language:    Haskell2010
+--   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+--   hs-source-dirs:      plot
+--   main-is:             Main.hs
+--   build-depends:       base
+--                      , diagrams-lib >= 1.3.1.4
+--                      , diagrams-rasterific
+--                      , diagrams-postscript
+--                      , mtl >= 2.2.1
+--                      , mwc-probability
+--                      , plots
+--                      , primitive >= 0.6.1.0
+--                      , sde
+--                      , transformers >= 0.5.2.0
+--                      -- , pipes
 
 test-suite spec
   default-language:    Haskell2010

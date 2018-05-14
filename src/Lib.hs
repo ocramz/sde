@@ -1,7 +1,7 @@
 {-# language FlexibleContexts #-}
 module Lib where
 
-import Control.Applicative
+-- import Control.Applicative
 import Control.Monad
 
 import Control.Monad.Primitive
@@ -9,9 +9,11 @@ import Control.Monad.Primitive
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Strict (StateT, get, put, evalStateT)
+-- import Control.Monad.Trans.Reader
 
 import System.Random.MWC.Probability
-
+import qualified System.Random.MWC.Probability.Transition as MPT
+import qualified Control.Monad.Log as L
 -- import Pipes (Producer, yield, (>->), (>~), await, runEffect)
 -- import qualified Pipes.Prelude as P (take, mapM_, mapM, sequence)
 
@@ -36,6 +38,8 @@ sampleSDE msf f g = do
   let z = f x w
   put z
   return z
+
+
 
 
 
