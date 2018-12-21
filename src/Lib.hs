@@ -30,9 +30,8 @@ newtype Transition m a = Trans { runTrans :: Gen (PrimState m) -> StateT a m a }
 -- *** state transformers
 
 -- | Template for a time-discrete SDE: at every timestep, sample from the `Prob` and apply the function to the previous state and current sample. This can be used to implement the Euler-Maruyama integrator.
-sampleSDE ::
-   Monad m => Prob m a -> (b -> a -> b) -> Gen (PrimState m) -> StateT b m b
-sampleSDE msf f g = do
+transition :: Monad m => Prob m a -> (b -> a -> b) -> Transition m b
+transition msf f = Trans $ \g -> do
   x <- get
   w <- lift $ sample msf g
   let z = f x w
@@ -63,7 +62,7 @@ sampleSDEn n sde x0 g = stepN n (runTrans sde g) x0
 -- | NB : the position at a time `t > t0` of a Brownian walker is the integral in time of a Wiener process (i.e. the sample path up to time `t` is cumulative sum of the Brownian displacements)
 brownian ::
   PrimMonad m => Double -> Transition m Double
-brownian sig = Trans (sampleSDE (normal 0 sig) (+))
+brownian sig = transition (normal 0 sig) (+)
 
 
 
@@ -72,7 +71,7 @@ brownian sig = Trans (sampleSDE (normal 0 sig) (+))
 -- * Log-Normal Brownian walk
 -- | Used for modelling stocks
 brownianLogNormal :: PrimMonad m => Double -> Double -> Transition m Double
-brownianLogNormal mu sig = Trans (sampleSDE (normal mu sig) f) where
+brownianLogNormal mu sig = transition (normal mu sig) f where
   f s w = mu * s + sig * s * w
 
 
@@ -96,7 +95,7 @@ instance Show SV1 where show (SV1 a b) = show (a, b)
 
 stochVolatility1 :: PrimMonad m =>
    Double -> Double -> Double -> Double -> Transition m SV1
-stochVolatility1 a b sig alpha = Trans (sampleSDE randf f) where
+stochVolatility1 a b sig alpha = transition randf f where
   randf = (,) <$> normal 0 1
               -- <*> alphaStable alpha 1
               <*> alphaStable100 alpha
@@ -108,7 +107,7 @@ stochVolatility1 a b sig alpha = Trans (sampleSDE randf f) where
 -- κ, θ, α, q > 0, and p = 1/2
 heston :: PrimMonad m =>
   Double -> Double -> Double -> Double -> Double -> Double -> Transition m SV1
-heston mu p kappa theta alpha q = Trans (sampleSDE randf f) where
+heston mu p kappa theta alpha q = transition randf f where
   randf = (,) <$> normal 0 1 <*> normal 0 1
   f (SV1 s v) (ws, wv) = let st = mu*s + (v**p)*s*ws
                              vt = kappa*(theta-v) + alpha*(v**q)*wv
@@ -123,7 +122,7 @@ heston mu p kappa theta alpha q = Trans (sampleSDE randf f) where
 -- no correlation in Brownian noise terms
 scottChesney0 :: PrimMonad m =>
      Double -> Double -> Double -> Double -> Transition m SV1
-scottChesney0 mu kappa theta alpha = Trans (sampleSDE randf f) where
+scottChesney0 mu kappa theta alpha = transition randf f where
   randf = (,) <$> normal 0 1 <*> normal 0 1
   f (SV1 s y) (ws, wy) = let st = mu * s + exp y * s * ws
                              yt = kappa * (theta - y) + alpha * wy
@@ -132,7 +131,7 @@ scottChesney0 mu kappa theta alpha = Trans (sampleSDE randf f) where
 -- | ", unit correlation in Brownian noise terms
 scottChesney1 :: PrimMonad m =>
      Double -> Double -> Double -> Double -> Transition m SV1
-scottChesney1 mu kappa theta alpha = Trans (sampleSDE randf f) where
+scottChesney1 mu kappa theta alpha = transition randf f where
   randf = normal 0 1
   f (SV1 s y) w = let st = mu * s + exp y * s * w
                       yt = kappa * (theta - y) + alpha * w
